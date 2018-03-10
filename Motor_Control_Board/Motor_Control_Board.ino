@@ -4,6 +4,12 @@
  */
 //include librarys
 #include<Servo.h>
+#include<mcp_can.h>
+#include<SPI.h>
+
+//setup CAN 
+const int SPI_CS_PIN=10;
+MCP_CAN CAN(SPI_CS_PIN);
 
 //init servo objects
 Servo servo_LeftMotor;
@@ -34,6 +40,15 @@ void setup()
   servo_LeftMotor.attach(LeftMotorPin);
   pinMode(RightMotorPin,OUTPUT);
   servo_RightMotor.attach(RightMotorPin);
+
+  //init CAN
+  while(CAN_OK!=CAN.begin(CAN_500KBPS)
+  {
+    Serial.println("CAN BUS init fail");
+    Serial.println("Init CAN BUS fail again");
+    delay(100);
+  }
+  Serial.println("CAN BUS init ok!");
 }
 
 void loop() 
