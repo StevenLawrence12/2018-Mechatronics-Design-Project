@@ -17,7 +17,7 @@ const int RightMotorPin=9;
 unsigned int leftMotorSpeed;
 unsigned int rightMotorSpeed;
 
-//drive mode; 0=stop, 1=straight, 2=left turn, 3=right turn
+//drive mode; 0=stop, 1=straight, 2=left turn, 3=right turn, 4=reverse
 unsigned int driveMode=0;
 
 //drive function
@@ -38,6 +38,9 @@ void setup()
 
 void loop() 
 {
+  if(Serial.available()>0)
+  driveMode=Serial.read()-48;
+  
   switch(driveMode)
   {
     case 0:
@@ -45,24 +48,35 @@ void loop()
       leftMotorSpeed=1500;
       rightMotorSpeed=1500;
       Serial.println("Stopped");
+      break;
     }
     case 1: 
     {
-      leftMotorSpeed=1600;
-      rightMotorSpeed=1600;
+      leftMotorSpeed=1650;
+      rightMotorSpeed=1640;
       Serial.println("Driving Straight");
+      break;
     }
      case 2: 
     {
-      leftMotorSpeed=1500;
-      rightMotorSpeed=1600;
+      leftMotorSpeed=1450;
+      rightMotorSpeed=1650;
       Serial.println("Turning Left");
+      break;
     }
      case 3: 
     {
-      leftMotorSpeed=1500;
-      rightMotorSpeed=1600;
+      leftMotorSpeed=1650;
+      rightMotorSpeed=1450;
       Serial.println("Turning Right");
+      break;
+    }
+    case 4:
+    {
+      leftMotorSpeed=1350;
+      rightMotorSpeed=1360;
+      Serial.println("Reverse");
+      break;
     }
   }
  drive(leftMotorSpeed, rightMotorSpeed);
