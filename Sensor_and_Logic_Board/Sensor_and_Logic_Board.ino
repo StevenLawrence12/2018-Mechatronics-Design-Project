@@ -90,10 +90,10 @@ Serial.println(rightEncoderSpeed);
 frontDistanceRead();
 Serial.print("Front distance");
 Serial.println(frontDistance);
-/*if(frontDistance<=frontStopDistance)
+if(frontDistance<=frontStopDistance)
 {
-  motorDriveBuf[0]=
-  sendMsgBuf(motorDrive,0,8,motorDriveBuf);
-}*/
+  motorDriveBuf[0]=0x1;
+ CAN.sendMsgBuf(motorDrive,0,8,motorDriveBuf);
+}
 
 }

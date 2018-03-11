@@ -26,6 +26,11 @@ unsigned int rightMotorSpeed;
 //drive mode; 0=stop, 1=straight, 2=left turn, 3=right turn, 4=reverse
 unsigned int driveMode=0;
 
+//CAN stuff
+byte len;
+byte receiveBuf[8];
+int canId;
+
 //drive function
 void drive(int leftSpeed,int rightSpeed)
 {
@@ -42,7 +47,7 @@ void setup()
   servo_RightMotor.attach(RightMotorPin);
 
   //init CAN
-  while(CAN_OK!=CAN.begin(CAN_500KBPS)
+  while(CAN_OK!=CAN.begin(CAN_500KBPS))
   {
     Serial.println("CAN BUS init fail");
     Serial.println("Init CAN BUS fail again");
@@ -53,8 +58,22 @@ void setup()
 
 void loop() 
 {
-  if(Serial.available()>0)
-  driveMode=Serial.read()-48;
+
+  //receiving CAN message
+  if(CAN_MSGAVAIL==CAN.checkReceive()) //checks if there is anything to read in CAN buffers
+  {
+    CAN.readMsgBuf(&len, receiveBuf); //reading CAN message
+    canId=CAN.getCanId();  //read the message id associated with this CAN message
+  }
+
+  if(canId==0x3)
+  {
+    if(receiveBuf[0]==0x1)
+    driveMode=0;
+  }
+  
+  /*if(Serial.available()>0)
+  driveMode=Serial.read()-48;*/
   
   switch(driveMode)
   {
