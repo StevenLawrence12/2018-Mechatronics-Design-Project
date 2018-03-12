@@ -8,8 +8,10 @@
 #include<SPI.h>
 
 //define pin numbers
-const int trigPin=8;  //front ultrasonic
-const int echoPin=9;  //front ultrasonic
+const int sideTrigPin=4;  //side ultrasonic
+const int sideEchoPin=7;  //side ultrasonic
+const int frontTrigPin=8;  //front ultrasonic
+const int frontEchoPin=9;  //front ultrasonic
 const int SPI_CS_PIN=10; 
 
 I2CEncoder leftEncoder;
@@ -20,7 +22,12 @@ MCP_CAN CAN(SPI_CS_PIN);
 double leftEncoderSpeed;
 double rightEncoderSpeed;
 int frontDistance;
+int sideDistance;
 int frontStopDistance=10;
+int leftDriveMotorSpeed=0;
+bool leftDriveMotorReverse;
+int rightDriveMotorSpeed=0;
+bool rightDriveMotorReverse;
 
 //CAN id's
 int motorDrive=0x3;
@@ -29,22 +36,22 @@ int motorDrive=0x3;
 byte motorDriveBuf[8];
 
 //checks the distance infront of the robot
-void frontDistanceRead()
+void ultrasonicRead(const int trigPin, const int echoPin, int *distance)
 {
-  //clears the trigpin
+  //clears the frontTrigPin
 digitalWrite(trigPin,LOW);
 delayMicroseconds(2);
 
-//set trigpin high for 10 microseconds to send pulse out
+//set frontTrigPin high for 10 microseconds to send pulse out
 digitalWrite(trigPin,HIGH);
 delayMicroseconds(10);
 digitalWrite(trigPin,LOW);
 
-//read the echopin
+//read the frontEchoPin
 long duration=pulseIn(echoPin,HIGH);
 
 //calculate the distance 0.034cm/us
-frontDistance=duration*0.034/2;
+*distance=duration*0.034/2;
 }
 
 
@@ -71,8 +78,10 @@ while(CAN_OK!=CAN.begin(CAN_500KBPS))
 Serial.println("CAN BUS init ok!");
 
 //pinmodes
-pinMode(trigPin,OUTPUT);
-pinMode(echoPin,INPUT);
+pinMode(frontTrigPin,OUTPUT);
+pinMode(frontEchoPin,INPUT);
+pinMode(sideTrigPin,OUTPUT);
+pinMode(sideTrigPin,INPUT);
 
 }
 
@@ -87,7 +96,8 @@ Serial.println(leftEncoderSpeed);
 Serial.print("Right encoder speed: ");
 Serial.println(rightEncoderSpeed);
 
-frontDistanceRead();
+ultrasonicRead(frontTrigPin,frontEchoPin,&frontDistance);  //reads front ultrasonic pin
+ultrasonicRead(sideTrigPin,sideEchoPin,&sideDistance); //reads side ultrasonic pin
 Serial.print("Front distance");
 Serial.println(frontDistance);
 if(frontDistance<=frontStopDistance)
