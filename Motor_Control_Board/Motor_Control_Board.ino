@@ -27,9 +27,11 @@ unsigned int rightMotorSpeed;
 unsigned int driveMode=0;
 
 //CAN stuff
-byte len;
+byte len=0;
 byte receiveBuf[8];
 int canId;
+
+byte driveBuf[8];
 
 //drive function
 void drive(int leftSpeed,int rightSpeed)
@@ -54,6 +56,7 @@ void setup()
     delay(100);
   }
   Serial.println("CAN BUS init ok!");
+  driveMode=1;
 }
 
 void loop() 
@@ -64,18 +67,35 @@ void loop()
   {
     CAN.readMsgBuf(&len, receiveBuf); //reading CAN message
     canId=CAN.getCanId();  //read the message id associated with this CAN message
+    Serial.println("message recieved");
+    Serial.print("CAN ID: ");
+    Serial.println(canId);
+    if(canId==0x01)
+    {
+    for(int i=0;i<8;i++)
+    {
+      driveBuf[i]=receiveBuf[i];
+    }
+    }
   }
 
-  if(canId==0x3)
-  {
-    if(receiveBuf[0]==0x1)
-    driveMode=0;
-  }
+
+  if(driveBuf[1]==0x00)
+    rightMotorSpeed=1500-driveBuf[0];
+  else if(driveBuf[1]==0x01)
+    rightMotorSpeed=1500+driveBuf[0];
+
+  if(driveBuf[3]==0x00)
+  leftMotorSpeed=1500-driveBuf[2];
+  else if(driveBuf[3]==0x01);
+  leftMotorSpeed=1500+driveBuf[2];
+
   
-  /*if(Serial.available()>0)
-  driveMode=Serial.read()-48;*/
   
-  switch(driveMode)
+  if(Serial.available()>0)
+  driveMode=Serial.read()-48;
+  
+  /*switch(driveMode)
   {
     case 0:
     {
@@ -112,6 +132,6 @@ void loop()
       Serial.println("Reverse");
       break;
     }
-  }
+  }*/
  drive(leftMotorSpeed, rightMotorSpeed);
 }
