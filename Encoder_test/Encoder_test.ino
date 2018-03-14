@@ -11,8 +11,8 @@ I2CEncoder encoder2;  //S
 const int MotorPin1=8;  //M
 const int MotorPin2=9;  //M
 
-int motor1Speed=1650; //M
-int motor2Speed=1650; //M
+int motor1Speed=1650; //S
+int motor2Speed=1650; //S
 
 int encoder1Speed;  //S
 int encoder2Speed;  //S
