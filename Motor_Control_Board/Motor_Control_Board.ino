@@ -23,9 +23,6 @@ const int RightMotorPin=9;
 unsigned int leftMotorSpeed;
 unsigned int rightMotorSpeed;
 
-//drive mode; 0=stop, 1=straight, 2=left turn, 3=right turn, 4=reverse
-unsigned int driveMode=0;
-
 //CAN stuff
 byte len=0;
 byte receiveBuf[8];
@@ -56,7 +53,6 @@ void setup()
     delay(100);
   }
   Serial.println("CAN BUS init ok!");
-  driveMode=1;
 }
 
 void loop() 
@@ -79,7 +75,6 @@ void loop()
     }
   }
 
-
   if(driveBuf[1]==0x00)
     rightMotorSpeed=1500-driveBuf[0];
   else if(driveBuf[1]==0x01)
@@ -90,48 +85,11 @@ void loop()
   else if(driveBuf[3]==0x01);
   leftMotorSpeed=1500+driveBuf[2];
 
-  
-  
-  if(Serial.available()>0)
-  driveMode=Serial.read()-48;
-  
-  /*switch(driveMode)
+  if(driveBuf[1]==0x02);
   {
-    case 0:
-    {
-      leftMotorSpeed=1500;
-      rightMotorSpeed=1500;
-      Serial.println("Stopped");
-      break;
-    }
-    case 1: 
-    {
-      leftMotorSpeed=1650;
-      rightMotorSpeed=1640;
-      Serial.println("Driving Straight");
-      break;
-    }
-     case 2: 
-    {
-      leftMotorSpeed=1450;
-      rightMotorSpeed=1650;
-      Serial.println("Turning Left");
-      break;
-    }
-     case 3: 
-    {
-      leftMotorSpeed=1650;
-      rightMotorSpeed=1450;
-      Serial.println("Turning Right");
-      break;
-    }
-    case 4:
-    {
-      leftMotorSpeed=1350;
-      rightMotorSpeed=1360;
-      Serial.println("Reverse");
-      break;
-    }
-  }*/
+    rightMotorSpeed=1500+driveBuf[0];
+    leftMotorSpeed=1500+driveBuf[2];
+  }
+  
  drive(leftMotorSpeed, rightMotorSpeed);
 }
