@@ -34,8 +34,7 @@ void drive(int leftSpeed,int rightSpeed){
   servo_RightMotor.writeMicroseconds(rightSpeed);
 }
 
-void setup() 
-{
+void setup() {
   Serial.begin(9600);
 
   //pinmodes 
@@ -55,8 +54,7 @@ void setup()
   
 }
 
-void loop() 
-{
+void loop() {
 
   //receiving CAN message
   if(CAN_MSGAVAIL==CAN.checkReceive()) //checks if there is anything to read in CAN buffers

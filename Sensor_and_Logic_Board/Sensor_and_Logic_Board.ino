@@ -9,8 +9,8 @@
 #include<SPI.h>
 
 //declare pins
-/*const int sideTrigPin=4;  //side ultrasonic
-const int sideEchoPin=7;  //side ultrasonic*/
+const int sideTrigPin=4;  //side ultrasonic
+const int sideEchoPin=7;  //side ultrasonic
 const int frontTrigPin=8;  //front ultrasonic
 const int frontEchoPin=9;  //front ultrasonic
 const int SPI_CS_PIN=10; 
@@ -25,7 +25,7 @@ MCP_CAN CAN(SPI_CS_PIN);
 double leftEncoderSpeed; 
 double rightEncoderSpeed;
 int frontDistance;
-//int sideDistance;
+int sideDistance;
 int frontStopDistance=10;
 
 int leftDriveMotorSpeed=0;
@@ -103,8 +103,8 @@ while(CAN_OK!=CAN.begin(CAN_500KBPS)){
 //pinmodes
 pinMode(frontTrigPin,OUTPUT);
 pinMode(frontEchoPin,INPUT);
-/*pinMode(sideTrigPin,OUTPUT);
-pinMode(sideTrigPin,INPUT);*/
+pinMode(sideTrigPin,OUTPUT);
+pinMode(sideTrigPin,INPUT);
 
 leftDriveMotorSpeed=150;
 rightDriveMotorSpeed=150;
@@ -134,6 +134,17 @@ Serial.print("Right encoder speed: ");
 Serial.print(rightEncoderSpeed/60);
 Serial.println("cm/s");
 
+ultrasonicRead(sideTrigPin,sideEchoPin,&sideDistance); //reads side ultrasonic pin
+
+if(sideDistance<7)
+{
+  leftDriveMotorSpeed--;
+}
+else if( sideDistance>10)
+{
+  leftDriveMotorSpeed++;
+}
+
 //if a wall is too close, make a left turn;
 if(frontDistance<=frontStopDistance)
 {
@@ -143,19 +154,7 @@ if(frontDistance<=frontStopDistance)
  rightDriveMotorReverse=1;
 }
 
-
 setDriveMotorSettings(&leftDriveMotorSpeed,&leftDriveMotorReverse,&rightDriveMotorSpeed,&rightDriveMotorReverse);
 sendCANMsg(&motorDriveId,motorDriveBuf);
+
 }
-
-/*ultrasonicRead(sideTrigPin,sideEchoPin,&sideDistance); //reads side ultrasonic pin
-if(sideDistance<7)
-{
-  leftDriveMotorSpeed--;
-}
-else if( sideDistance>10)
-{
-  rightDriveMotorSpeed--;
-}*/
-
-
