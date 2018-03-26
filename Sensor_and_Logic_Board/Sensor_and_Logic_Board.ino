@@ -22,28 +22,28 @@ I2CEncoder rightEncoder;
 MCP_CAN CAN(SPI_CS_PIN);
 
 //init variables
-double leftEncoderSpeed; 
-double rightEncoderSpeed;
-int frontDistance;
-int sideDistance;
-int frontStopDistance=10;
+double leftEncoderSpeed; //left motor encoder
+double rightEncoderSpeed; //right motor encoder
+int frontDistance; //distance infront of robot
+int sideDistance; //distance to the right side of robot
+int frontStopDistance=10; //minimum distance to objects infront of robot before turning/stopping
 
-int leftDriveMotorSpeed=0;
-bool leftDriveMotorReverse=true;
-int rightDriveMotorSpeed=0;
-bool rightDriveMotorReverse=true;
+int leftDriveMotorSpeed=0; //speed of left motor (0-255)
+bool leftDriveMotorReverse=true; //sets motor in reverse or forward (false=reverse, true= forward
+int rightDriveMotorSpeed=0; //speed of right motor (0-255)
+bool rightDriveMotorReverse=true; //sets right motor in forward or reverse motion (false=reverse, true=forward)
 //int targetSpeed;
 
-int tempLeftDriveMotorSpeed=0;
-bool tempLeftDriveMotorReverse=true;
-int tempRightDriveMotorSpeed=0;
-bool tempRightDriveMotorReverse=true;
+int tempLeftDriveMotorSpeed=0;  //temporary left motor speed for a left turn
+bool tempLeftDriveMotorReverse=true; //sets motor direction
+int tempRightDriveMotorSpeed=0; //temporary right motor speed for a right turn
+bool tempRightDriveMotorReverse=true; //sets right motor direction
 
 //CAN id's
-unsigned long motorDriveId=0x01;
+unsigned long motorDriveId=0x01; //ID for drive motor instructions =1
 
 //CAN messagebufs
-byte motorDriveBuf[8];
+byte motorDriveBuf[8]; //array of 8 bytes to hold the information for drive motor instructions
 
 //reads the ultrasonics
 void ultrasonicRead(const int trigPin, const int echoPin, int *distance){
@@ -63,6 +63,7 @@ long duration=pulseIn(echoPin,HIGH);
 *distance=duration*0.034/2;
 }
 
+//setup drive motor instuction array 
 void setDriveMotorSettings(int *leftSpeed,bool *leftRev,int *rightSpeed,bool *rightRev, byte *buf){
   /*Serial.println(*leftSpeed);
   Serial.println(*rightSpeed);*/
@@ -76,6 +77,7 @@ void setDriveMotorSettings(int *leftSpeed,bool *leftRev,int *rightSpeed,bool *ri
   buf[7]=0;
 }
 
+//sends a message through CAN
 void sendCANMsg(unsigned long *msgId,byte *msgBuf){
  byte CANTx=CAN.sendMsgBuf(*msgId,0,8,msgBuf);
  if(CANTx==CAN_OK)
