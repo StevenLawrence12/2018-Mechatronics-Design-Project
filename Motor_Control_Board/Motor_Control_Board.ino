@@ -59,9 +59,18 @@ void loop() {
   //receiving CAN message
   if(CAN_MSGAVAIL==CAN.checkReceive()) //checks if there is anything to read in CAN buffers
   {
+    Serial.println("receive");
     CAN.readMsgBuf(&len, receiveBuf); //reading CAN message
     canId=CAN.getCanId();  //read the message id associated with this CAN message
-    
+
+Serial.print("ReceiveBuf: ");
+    for(int i=0;i<8;i++){
+    Serial.print(receiveBuf[i]);
+    Serial.print(", ");
+  }Serial.println();
+
+  Serial.print("CAN ID: ");
+  Serial.println(canId);
     if(canId==0x01){
     for(int i=0;i<8;i++){
       driveBuf[i]=receiveBuf[i];
@@ -69,11 +78,20 @@ void loop() {
     }
   }
 
+
+  for(int i=0;i<8;i++){
+    Serial.print(driveBuf[i]);
+    Serial.print(", ");
+  }Serial.println();
+  
   //set drive motor speeds
   if(driveBuf[1]==0) leftMotorSpeed=1500-driveBuf[0];
   else leftMotorSpeed=1500+driveBuf[0];
   if(driveBuf[3]==0) rightMotorSpeed=1500-driveBuf[2];
   else rightMotorSpeed=1500+driveBuf[2];
+
+  Serial.println(leftMotorSpeed);
+  Serial.println(rightMotorSpeed);
 
   //drive motors
   drive(leftMotorSpeed, rightMotorSpeed);
