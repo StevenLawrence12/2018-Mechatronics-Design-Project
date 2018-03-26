@@ -17,7 +17,7 @@ const int SPI_CS_PIN=10;
 
 
 //init objects
-I2CEncoder leftEncoder;
+I2CEncoder leftEncoder;                       
 I2CEncoder rightEncoder;
 MCP_CAN CAN(SPI_CS_PIN);
 
@@ -33,6 +33,11 @@ bool leftDriveMotorReverse=true;
 int rightDriveMotorSpeed=0;
 bool rightDriveMotorReverse=true;
 //int targetSpeed;
+
+int tempLeftDriveMotorSpeed=0;
+bool tempLeftDriveMotorReverse=true;
+int tempRightDriveMotorSpeed=0;
+bool tempRightDriveMotorReverse=true;
 
 //CAN id's
 unsigned long motorDriveId=0x01;
@@ -58,19 +63,21 @@ long duration=pulseIn(echoPin,HIGH);
 *distance=duration*0.034/2;
 }
 
-void setDriveMotorSettings(int *leftSpeed,bool *leftRev,int *rightSpeed,bool *rightRev){
-  motorDriveBuf[0]=leftSpeed;
-  motorDriveBuf[1]=leftRev;
-  motorDriveBuf[2]=rightSpeed;
-  motorDriveBuf[3]=rightRev;
-  motorDriveBuf[4]=0;
-  motorDriveBuf[5]=0;
-  motorDriveBuf[6]=0;
-  motorDriveBuf[7]=0;
+void setDriveMotorSettings(int *leftSpeed,bool *leftRev,int *rightSpeed,bool *rightRev, byte *buf){
+  /*Serial.println(*leftSpeed);
+  Serial.println(*rightSpeed);*/
+  buf[0]=*leftSpeed;  
+  buf[1]=*leftRev;
+  buf[2]=*rightSpeed;
+  buf[3]=*rightRev;
+  buf[4]=0;
+  buf[5]=0;
+  buf[6]=0;
+  buf[7]=0;
 }
 
 void sendCANMsg(unsigned long *msgId,byte *msgBuf){
- byte CANTx=CAN.sendMsgBuf(msgId,0,8,msgBuf);
+ byte CANTx=CAN.sendMsgBuf(*msgId,0,8,msgBuf);
  if(CANTx==CAN_OK)
  Serial.println("Message sent successfully");
  else
@@ -106,15 +113,12 @@ pinMode(frontEchoPin,INPUT);
 pinMode(sideTrigPin,OUTPUT);
 pinMode(sideTrigPin,INPUT);
 
-leftDriveMotorSpeed=150;
-rightDriveMotorSpeed=150;
+leftDriveMotorSpeed=120;
+rightDriveMotorSpeed=120;
 }
 
 void loop() 
 {
-
-
-ultrasonicRead(frontTrigPin,frontEchoPin,&frontDistance);  //reads front ultrasonic pin
 
 //read encoders
 leftEncoderSpeed=leftEncoder.getSpeed();
@@ -123,38 +127,58 @@ rightEncoderSpeed=rightEncoder.getSpeed();
 if((leftEncoderSpeed-rightEncoderSpeed)>.5) {
     leftDriveMotorSpeed--;
   }
-  if((rightEncoderSpeed-leftEncoderSpeed)>.5)  {
+if((rightEncoderSpeed-leftEncoderSpeed)>.5)  {
     leftDriveMotorSpeed++;
   } 
 
-Serial.print("Left encoder speed: ");
+/*Serial.print("Left encoder speed: ");
 Serial.print(leftEncoderSpeed/60);
 Serial.println("cm/s");
 Serial.print("Right encoder speed: ");
 Serial.print(rightEncoderSpeed/60);
-Serial.println("cm/s");
+Serial.println("cm/s");*/
 
 ultrasonicRead(sideTrigPin,sideEchoPin,&sideDistance); //reads side ultrasonic pin
 
-if(sideDistance<7)
+/*if(sideDistance<7)
 {
   leftDriveMotorSpeed--;
 }
 else if( sideDistance>10)
 {
   leftDriveMotorSpeed++;
-}
+}*/
 
+ultrasonicRead(frontTrigPin,frontEchoPin,&frontDistance);  //reads front ultrasonic pin
+
+Serial.print("Front distance: ");
+Serial.println(frontDistance);
 //if a wall is too close, make a left turn;
-if(frontDistance<=frontStopDistance)
+while(frontDistance<=frontStopDistance)
 {
- leftDriveMotorSpeed=50;
- leftDriveMotorReverse=0;
- rightDriveMotorSpeed=150;
- rightDriveMotorReverse=1;
+  Serial.println("Turning");
+ tempLeftDriveMotorSpeed=100 ;
+ tempLeftDriveMotorReverse=0;
+ tempRightDriveMotorSpeed=150;
+ tempRightDriveMotorReverse=1;
+ setDriveMotorSettings(&tempLeftDriveMotorSpeed,&tempLeftDriveMotorReverse,&tempRightDriveMotorSpeed,&tempRightDriveMotorReverse, motorDriveBuf);
+ sendCANMsg(&motorDriveId,motorDriveBuf);
+ ultrasonicRead(frontTrigPin,frontEchoPin,&frontDistance);  //reads front ultrasonic pin
+
 }
 
-setDriveMotorSettings(&leftDriveMotorSpeed,&leftDriveMotorReverse,&rightDriveMotorSpeed,&rightDriveMotorReverse);
+/*Serial.println(leftDriveMotorSpeed);
+Serial.println(rightDriveMotorSpeed);*/
+setDriveMotorSettings(&leftDriveMotorSpeed,&leftDriveMotorReverse,&rightDriveMotorSpeed,&rightDriveMotorReverse, motorDriveBuf);
+
+ /*for(int i=0;i<8;i++){
+    Serial.print(motorDriveBuf[i]);
+    Serial.print(", ");
+  }Serial.println();
+
+  Serial.print("CAN ID: ");
+  Serial.println(motorDriveId);*/
+  
 sendCANMsg(&motorDriveId,motorDriveBuf);
 
 }
