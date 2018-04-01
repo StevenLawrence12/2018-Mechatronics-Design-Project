@@ -9,8 +9,10 @@
 #include<SPI.h>
 
 //declare pins
-const int sideTrigPin=4;  //side ultrasonic
-const int sideEchoPin=7;  //side ultrasonic
+const int sideTrigPin1=4; //forward side ultrasonic pin
+const int sideEchoPin1=5; //forward side ultrasonic pin
+const int sideTrigPin2=6;  //back side ultrasonic
+const int sideEchoPin2=7;  //back side ultrasonic
 const int frontTrigPin=8;  //front ultrasonic
 const int frontEchoPin=9;  //front ultrasonic
 const int SPI_CS_PIN=10; 
@@ -25,8 +27,9 @@ MCP_CAN CAN(SPI_CS_PIN);
 double leftEncoderSpeed; //left motor encoder
 double rightEncoderSpeed; //right motor encoder
 int frontDistance; //distance infront of robot
-int sideDistance; //distance to the right side of robot
-int frontStopDistance=10; //minimum distance to objects infront of robot before turning/stopping
+int sideDistance1; //distance to the right side of robot
+int sideDistance2; 
+int frontStopDistance=30; //minimum distance to objects infront of robot before turning/stopping
 
 int leftDriveMotorSpeed=0; //speed of left motor (0-255)
 bool leftDriveMotorReverse=true; //sets motor in reverse or forward (false=reverse, true= forward
@@ -47,6 +50,7 @@ byte motorDriveBuf[8]; //array of 8 bytes to hold the information for drive moto
 
 //reads the ultrasonics
 void ultrasonicRead(const int trigPin, const int echoPin, int *distance){
+ // int oldDist=*distance;
   //clears the frontTrigPin
 digitalWrite(trigPin,LOW);
 delayMicroseconds(2);
@@ -60,7 +64,10 @@ digitalWrite(trigPin,LOW);
 long duration=pulseIn(echoPin,HIGH);
 
 //calculate the distance 0.034cm/us
+
 *distance=duration*0.034/2;
+/*if(abs(*distance-oldDist)>40)
+*distance=oldDist;*/
 }
 
 //setup drive motor instuction array 
@@ -112,8 +119,10 @@ while(CAN_OK!=CAN.begin(CAN_500KBPS)){
 //pinmodes
 pinMode(frontTrigPin,OUTPUT);
 pinMode(frontEchoPin,INPUT);
-pinMode(sideTrigPin,OUTPUT);
-pinMode(sideTrigPin,INPUT);
+pinMode(sideTrigPin1,OUTPUT);
+pinMode(sideEchoPin1,INPUT);
+pinMode(sideTrigPin2,OUTPUT);
+pinMode(sideEchoPin2,INPUT);
 
 leftDriveMotorSpeed=120;
 rightDriveMotorSpeed=120;
@@ -133,6 +142,8 @@ if((rightEncoderSpeed-leftEncoderSpeed)>.5)  {
     leftDriveMotorSpeed++;
   } 
 
+  
+
 /*Serial.print("Left encoder speed: ");
 Serial.print(leftEncoderSpeed/60);
 Serial.println("cm/s");
@@ -140,16 +151,48 @@ Serial.print("Right encoder speed: ");
 Serial.print(rightEncoderSpeed/60);
 Serial.println("cm/s");*/
 
-ultrasonicRead(sideTrigPin,sideEchoPin,&sideDistance); //reads side ultrasonic pin
-
-/*if(sideDistance<7)
-{
+ultrasonicRead(sideTrigPin1,sideEchoPin1,&sideDistance1); //reads side ultrasonic pin
+ultrasonicRead(sideTrigPin2,sideEchoPin2,&sideDistance2);
+Serial.println(sideDistance1);
+Serial.println(sideDistance2);
+if((sideDistance1>=6)&&(sideDistance2>=6)&&(sideDistance1<=9)&&(sideDistance2<=9)){
+  Serial.println("In range");
+if((sideDistance1-sideDistance2)<0){
+  Serial.println("left");
   leftDriveMotorSpeed--;
 }
-else if( sideDistance>10)
-{
+else if((sideDistance1-sideDistance2)>0){
+  Serial.println("right");
   leftDriveMotorSpeed++;
-}*/
+}
+}
+if(sideDistance1<6){
+Serial.println("Hard Left");
+leftDriveMotorSpeed-=4;
+}
+else if(sideDistance2<6){
+Serial.println("right");
+leftDriveMotorSpeed++;
+}
+else if(sideDistance1>9){
+Serial.println("Hardright");
+leftDriveMotorSpeed+=4;
+}
+else if(sideDistance2>9){
+Serial.println("left");
+leftDriveMotorSpeed--;
+}
+else{
+  if((leftEncoderSpeed-rightEncoderSpeed)>.5) {
+    leftDriveMotorSpeed--;
+  }
+if((rightEncoderSpeed-leftEncoderSpeed)>.5)  {
+    leftDriveMotorSpeed++;
+  } 
+}
+
+
+
 
 ultrasonicRead(frontTrigPin,frontEchoPin,&frontDistance);  //reads front ultrasonic pin
 
@@ -169,8 +212,11 @@ while(frontDistance<=frontStopDistance)
 
 }
 
-/*Serial.println(leftDriveMotorSpeed);
-Serial.println(rightDriveMotorSpeed);*/
+Serial.println(leftDriveMotorSpeed);
+Serial.println(rightDriveMotorSpeed);
+
+/*if(leftDriveMotorSpeed>140)leftDriveMotorSpeed=130;
+if(leftDriveMotorSpeed<100)leftDriveMotorSpeed=110;*/
 setDriveMotorSettings(&leftDriveMotorSpeed,&leftDriveMotorReverse,&rightDriveMotorSpeed,&rightDriveMotorReverse, motorDriveBuf);
 
  /*for(int i=0;i<8;i++){
