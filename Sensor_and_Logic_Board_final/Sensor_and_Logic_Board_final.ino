@@ -17,6 +17,8 @@ I2CEncoder rightEncoder;
 unsigned int stage=0;
 byte huggingArmPos=0;
 byte extendArmPos=0;
+//distance variables
+unsigned int frontStopDist=20;
 //Drive Motor variables
 byte leftMotorSpeed=0;
 byte rightMotorSpeed=0;
@@ -27,6 +29,8 @@ long frontDistance;
 //Encoder variables
 long leftEncodRawPos;
 long rightEncodRawPos;
+double leftEncodSpeed;
+double rightEncodSpeed;
 //connect motor variables
 byte leftDr=0;
 byte rightDr=0;
@@ -45,7 +49,7 @@ byte connMotorBuf[5]={0,0,0,0,0}; //0=left motor on/off, 1=right motor on/off, 2
 //function prototypes
 void send_CAN_Msg(unsigned long *msgId,byte *msgBuf);
 void set_CAN_TX_Buf(byte *buf,byte *b0=0, byte *b1=0, byte *b2=0, byte *b3=0, byte *b4=0, byte *b5=0, byte *b6=0, byte *b7=0);
-long ultrasonicPing(const int ultPin);
+long ultrasonic_Ping(const int ultPin);
 
 void setup() {
 Serial.begin(9600);
@@ -79,28 +83,46 @@ rightDr=1;
 set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
 send_CAN_Msg(&connMotorId,connMotorBuf);
 
-/**********************************/
-
-//Code to drive straight
-/***********************************/
-//Drive control
+//start driving
 leftMotorSpeed=100;
 rightMotorSpeed=100;
 leftMotorRev=0;
 rightMotorRev=0;
 set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
 send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
-
-/***********************************/
-
-//Code to make a 90 degree left turn
+/**********************************/
+while(stage==0){
+  //Code to drive straight
+  /***********************************/
+  //Drive control with correction
+  leftEncodSpeed=leftEncoder.getSpeed();
+  rightEncodSpeed=rightEncoder.getSpeed();
+  if(leftEncodSpeed>rightEncodSpeed)
+  leftMotorSpeed--;
+  else if(rightEncodSpeed>leftEncodSpeed)
+  leftMotorSpeed++;
+  set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+  send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+  /***********************************/
+  
+  //Check front ultrasonic
+  frontDistance=ultrasonic_Ping(frontUltrasonicPin);
+  
+  //Code to make a 90 degree left turn
+  /************************************/
+  while(frontDistance<=frontStopDist){
+    leftMotorRev=1;
+    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+    
+    //check front ultrasonic again
+    frontDistance=ultrasonic_Ping(frontUltrasonicPin);
+    
+    //Increase stage after make a succesful first 90 degree turn
+    stage=1;
+  }
 /************************************/
-
-
-//Increase stage after make a succesful first 90 degree turn
-stage++;
-/************************************/
-
+}
 }
 case 1:{ //Wall follow code with the obtaining of the tesseract to move on
 //Code to follow wall
@@ -291,7 +313,7 @@ void set_CAN_TX_Buf(byte *buf,byte *b0=0, byte *b1=0, byte *b2=0, byte *b3=0, by
   buf[7]=*b7;
 }
 
-long ultrasonicPing(const int ultPin){
+long ultrasonic_Ping(const int ultPin){
   long duration, cm;
 
   pinMode(ultPin, OUTPUT);
