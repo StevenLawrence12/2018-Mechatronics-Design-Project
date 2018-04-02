@@ -7,6 +7,7 @@
 //declare pins
 const int frontUltrasonicPin=9;
 const int SPI_CS_PIN=10;
+const int hallPin=A3;
 
 //create objects
 MCP_CAN CAN(SPI_CS_PIN);
@@ -17,6 +18,10 @@ I2CEncoder rightEncoder;
 unsigned int stage=0;
 byte huggingArmPos=0;
 byte extendArmPos=0;
+//hall effect sensor variables
+int hallEffectRead;
+int hallEffectMin=528;
+int hallEffectMax=540;
 //distance variables
 unsigned int frontStopDist=20;
 //Drive Motor variables
@@ -127,14 +132,18 @@ while(stage==0){
 case 1:{ //Wall follow code with the obtaining of the tesseract to move on
   
 /******************************/
-//Turn on side ultrasonics
+//Turn on hall effect sensor
+pinMode(hallPin,INPUT);
 //Turn on swinging arm
 swing=1;
 set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
 send_CAN_Msg(&connMotorId,connMotorBuf);
+unsigned int hallConsecRead=0;
 /*****************************/
 
 while(stage==1){
+//Init stage 1
+
 //Code to follow wall
 /******************************************/
 //check side ultrasonics
@@ -159,11 +168,21 @@ frontDistance=ultrasonic_Ping(frontUltrasonicPin);
   }
 /**********************************************/
 
+
 //Code to see if we have a tesseract
 /***********************************/
+//read hall effect sensor
+hallEffectRead=analogRead(hallPin);
 //If halleffect sensor sees the tesseract
-//increase stage
-stage++;
+if((hallEffectRead<528)||(hallEffectRead>540))
+{
+  hallConsecRead++;
+  if(hallConsecRead>=4)
+  //increase stage
+  stage++;
+}
+else 
+hallConsecRead=0;
 /**************************************/
 }
 }
