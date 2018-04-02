@@ -3,17 +3,23 @@
 #include<SPI.h>
 
 //declare pins
-MCP_CAN CAN(SPI_CS_PIN);
+const int SPI_CS_PIN=10;
 
 //create objects
+MCP_CAN CAN(SPI_CS_PIN);
 
 //init variables
 unsigned int stage=0;
+byte huggingArmPos=0;
+byte extendArmPos=0;
 
 //init CAN variables
+unsigned long miscMotorsId=0x02;
+byte miscMotorsBuf[8]={0,0,0,0,0,0,0,0};
 
 //function prototypes
-void sendCANMsg(unsigned long *msgId,byte *msgBuf);
+void send_CAN_Msg(unsigned long *msgId,byte *msgBuf);
+void set_CAN_TX_Buf(byte *buf,byte *b0=0, byte *b1=0, byte *b2=0, byte *b3=0, byte *b4=0, byte *b5=0, byte *b6=0, byte *b7=0);
 
 void setup() {
 Serial.begin(9600);
@@ -102,12 +108,41 @@ case 3:{ //Deposit tesseract code
   //Tipping code
   /*********************/
 //rotate hugging arm
+huggingArmPos=130;
+set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos);
+send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
+
+//Delay 2 seconds
+delay(2000);
+
 //Extend tipping arm
+extendArmPos=180;
+set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos);
+send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
+
+//Delay 2 seconds
+delay(2000);
+
 //Drive backwards
+
 //retract tipping arm
+extendArmPos=0;
+set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos);
+send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
+
+//Delay 1 second
+delay(1000);
+
 //retract hugging arm
+huggingArmPos=130;
+set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos);
+send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
+
+//
 //Increase stage
   /**********************/
+  stage++;
+  /*********************/
 }
 
 case 4:{//Code to turn everything off
@@ -122,7 +157,7 @@ case 4:{//Code to turn everything off
 }
 
 //Function definitions
-void sendCANMsg(unsigned long *msgId,byte *msgBuf){
+void send_CAN_Msg(unsigned long *msgId,byte *msgBuf){
  byte CANTx=CAN.sendMsgBuf(*msgId,0,8,msgBuf);
  if(CANTx==CAN_OK)
  Serial.println("Message sent successfully");
@@ -132,3 +167,15 @@ void sendCANMsg(unsigned long *msgId,byte *msgBuf){
  Serial.println(CANTx); 
  }
 }
+
+void set_CAN_TX_Buf(byte *buf,byte *b0=0, byte *b1=0, byte *b2=0, byte *b3=0, byte *b4=0, byte *b5=0, byte *b6=0, byte *b7=0){
+  buf[0]=*b0;
+  buf[1]=*b1;
+  buf[2]=*b2;
+  buf[3]=*b3;
+  buf[4]=*b4;
+  buf[5]=*b5;
+  buf[6]=*b6;
+  buf[7]=*b7;
+}
+
