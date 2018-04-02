@@ -3,6 +3,7 @@
 #include<SPI.h>
 
 //declare pins
+const int frontUltrasonicPin=9;
 const int SPI_CS_PIN=10;
 
 //create objects
@@ -16,6 +17,7 @@ byte leftMotorSpeed=0;
 byte rightMotorSpeed=0;
 byte leftMotorRev=0;
 byte rightMotorRev=0;
+long frontDistance;
 
 //init CAN variables
 unsigned long driveMotorsId=0x01;
@@ -26,6 +28,7 @@ byte miscMotorsBuf[8]={0,0,0,0,0,0,0,0};
 //function prototypes
 void send_CAN_Msg(unsigned long *msgId,byte *msgBuf);
 void set_CAN_TX_Buf(byte *buf,byte *b0=0, byte *b1=0, byte *b2=0, byte *b3=0, byte *b4=0, byte *b5=0, byte *b6=0, byte *b7=0);
+long ultrasonicPing(const int ultPin);
 
 void setup() {
 Serial.begin(9600);
@@ -36,17 +39,22 @@ while(CAN_OK!=CAN.begin(CAN_500KBPS)){
   delay(100);
 }Serial.println("CAN BUS init ok!");
 
+//Pinmodes
+
 }
 
 void loop() {
 switch(stage){
 case 0:{ //inital start, drive straight to wall, make left turn
 
+//Turn on front ultrasonic
+
 //Code to drive straight
 /***********************************/
-
-
-
+leftMotorSpeed=100;
+rightMotorSpeed=100;
+leftMotorRev=0;
+rightMotorRev=0;
 /***********************************/
 
 //Code to make a 90 degree left turn
@@ -189,5 +197,23 @@ void set_CAN_TX_Buf(byte *buf,byte *b0=0, byte *b1=0, byte *b2=0, byte *b3=0, by
   buf[5]=*b5;
   buf[6]=*b6;
   buf[7]=*b7;
+}
+
+long ultrasonicPing(const int ultPin){
+  long duration, cm;
+
+  pinMode(ultPin, OUTPUT);
+  digitalWrite(ultPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(ultPin, HIGH);
+  delayMicroseconds(5);
+  digitalWrite(ultPin, LOW);
+  
+  pinMode(ultPin, INPUT);
+  duration = pulseIn(ultPin, HIGH);
+
+  cm = duration/29/2;
+
+  return cm;
 }
 
