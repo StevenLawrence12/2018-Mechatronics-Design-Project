@@ -1,6 +1,8 @@
 //include librarys
 #include<mcp_can.h>
 #include<SPI.h>
+#include<I2CEncoder.h>
+#include<Wire.h>
 
 //declare pins
 const int frontUltrasonicPin=9;
@@ -8,16 +10,23 @@ const int SPI_CS_PIN=10;
 
 //create objects
 MCP_CAN CAN(SPI_CS_PIN);
+I2CEncoder leftEncoder;
+I2CEncoder rightEncoder;
 
 //init variables
 unsigned int stage=0;
 byte huggingArmPos=0;
 byte extendArmPos=0;
+//Drive Motor variables
 byte leftMotorSpeed=0;
 byte rightMotorSpeed=0;
 byte leftMotorRev=0;
 byte rightMotorRev=0;
+//ultrasonic variables
 long frontDistance;
+//Encoder variables
+long leftEncodRawPos;
+long RightEncodRawPos;
 
 //init CAN variables
 unsigned long driveMotorsId=0x01;
@@ -32,6 +41,13 @@ long ultrasonicPing(const int ultPin);
 
 void setup() {
 Serial.begin(9600);
+Wire.begin();
+
+//init encoders
+leftEncoder.init((31.9186)*MOTOR_393_SPEED_ROTATIONS,MOTOR_393_TIME_DELTA);
+leftEncoder.setReversed(false);
+rightEncoder.init((31.9186)*MOTOR_393_SPEED_ROTATIONS,MOTOR_393_TIME_DELTA);
+rightEncoder.setReversed(true);
 
 while(CAN_OK!=CAN.begin(CAN_500KBPS)){
   Serial.println("CAN BUS init fail");
@@ -137,7 +153,7 @@ send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 //Delay 2 seconds
 delay(2000);
 
-//Drive backwards
+//Drive backwards ceratain distance
 leftMotorSpeed=100;
 rightMotorSpeed=100;
 leftMotorRev=1;
