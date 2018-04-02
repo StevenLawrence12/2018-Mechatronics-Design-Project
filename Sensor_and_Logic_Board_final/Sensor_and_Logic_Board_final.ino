@@ -12,8 +12,14 @@ MCP_CAN CAN(SPI_CS_PIN);
 unsigned int stage=0;
 byte huggingArmPos=0;
 byte extendArmPos=0;
+byte leftMotorSpeed=0;
+byte rightMotorSpeed=0;
+byte leftMotorRev=0;
+byte rightMotorRev=0;
 
 //init CAN variables
+unsigned long driveMotorsId=0x01;
+byte driveMotorsBuf[8]={0,0,0,0,0,0,0,0}; //0=leftMotorSpeed, 1=rightMotorSpeed, 2=leftMotorRev, 3=rightMotorRev
 unsigned long miscMotorsId=0x02;
 byte miscMotorsBuf[8]={0,0,0,0,0,0,0,0};
 
@@ -124,6 +130,12 @@ send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 delay(2000);
 
 //Drive backwards
+leftMotorSpeed=100;
+rightMotorSpeed=100;
+leftMotorRev=1;
+rightMotorRev=1;
+set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
 
 //retract tipping arm
 extendArmPos=0;
