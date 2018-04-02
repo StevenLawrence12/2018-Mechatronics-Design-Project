@@ -37,6 +37,12 @@ byte swingMotOn=0;
 byte hugMotOn=0;
 byte extMotOn=0;
 
+int lastLeft=0;
+int lastRight=0;
+int lastSwing=0;
+int lastHug=0;
+int lastExt=0;
+
 //init variables
 unsigned int leftMotorSpeed=0;
 unsigned int rightMotorSpeed=0;
@@ -68,6 +74,9 @@ void setup() {
   pinMode(LeftMotorPin,OUTPUT);
   pinMode(RightMotorPin,OUTPUT);
 
+  servo_Swinging.attach(swingMotorPin);
+  servo_Extending.attach(tipMotorPin);
+
   //init CAN
   while(CAN_OK!=CAN.begin(CAN_500KBPS)){
     Serial.println("CAN BUS init fail");
@@ -87,50 +96,97 @@ void loop() {
 
   Serial.print("CAN ID: ");
   Serial.println(canId);
+
+  for(int i=0; i<8;i++){
+    Serial.print(receiveBuf[i]);
+    Serial.print(", ");
+  }Serial.println();
     if(canId==0x01){
     for(int i=0;i<8;i++){
       driveBuf[i]=receiveBuf[i];
     }
     }
-    else if(canId=0x02){
+    else if(canId==0x02){
       for(int i=0;i<8;i++){
       miscBuf[i]=receiveBuf[i];
     }
     }
+
     else if(canId==0x03){
-    if(connBuf[0]==1)
-    servo_LeftMotor.attach(LeftMotorPin);
-    else
-    servo_LeftMotor.detach(); 
-    if(connBuf[1]==1)
-    servo_RightMotor.attach(RightMotorPin);
-    else
-    servo_RightMotor.detach(); 
-    if(connBuf[2]==1)
-    servo_Swinging.attach(swingMotorPin);
-    else
-    servo_Swinging.detach(); 
-    if(connBuf[3]==1)
-    servo_Hugging.attach(hugMotorPin);
-    else
-    servo_Hugging.detach(); 
-    if(connBuf[4]==1)
-    servo_Extending.attach(tipMotorPin);
-    else
-    servo_Extending.detach(); 
+      for(int i=0;i<5;i++){
+      connBuf[i]=receiveBuf[i];
+    }
     }
   }
+if(connBuf[0]!=lastLeft){
+  lastLeft=connBuf[0];
+  if(connBuf[0]==1){
+  servo_LeftMotor.attach(LeftMotorPin);
+  Serial.println("Left motor attached");
+  }
+  else {
+    servo_LeftMotor.detach();
+    Serial.println("Left motor dettached");
+  }
+}
+if(connBuf[1]!=lastRight){
+  lastRight=connBuf[1];
+   if(connBuf[1]==1){
+    servo_RightMotor.attach(RightMotorPin);
+    Serial.println("Right motor attached");
+    }
+    else{
+    servo_RightMotor.detach(); 
+    Serial.println("Right motor dettached");
+    }
+}
+if(connBuf[2]!=lastSwing){
+  lastSwing=connBuf[2];
+  if(connBuf[2]==1){
+    servo_Swinging.attach(swingMotorPin);
+    Serial.println("swinging motor attached");
+    }
+    else{
+    servo_Swinging.detach(); 
+    Serial.println("swinging motor detattched");
+    }
+}
+if(connBuf[3]!=lastHug){
+  lastHug=connBuf[3];
+  if(connBuf[3]==1){
+    servo_Hugging.attach(hugMotorPin);
+    Serial.println("hugging motor attached");
+    }
+    else{
+    servo_Hugging.detach(); 
+    Serial.println("hugging motor dettached");
+    }
+}
+if(connBuf[4]!=lastExt){
+  lastExt=connBuf[4];
+  if(connBuf[4]==1){
+    servo_Extending.attach(tipMotorPin);
+    Serial.println("extending motor attached" );
+    }
+    else{
+    servo_Extending.detach(); 
+    Serial.println("extending motor dettched");
+    }
+}
   
+
   hugArmPos=miscBuf[0];
   extArmPos=miscBuf[1];
+  /*Serial.println(hugArmPos);
+  Serial.println(extArmPos);*/
   swingArmSpeed=miscBuf[2];
   
   
   //set drive motor speeds
-  if(driveBuf[1]==0) leftMotorSpeed=1500-driveBuf[0];
+  if(driveBuf[2]==1) leftMotorSpeed=1500-driveBuf[0];
   else leftMotorSpeed=1500+driveBuf[0];
-  if(driveBuf[3]==0) rightMotorSpeed=1500-driveBuf[2];
-  else rightMotorSpeed=1500+driveBuf[2];
+  if(driveBuf[3]==1) rightMotorSpeed=1500-driveBuf[1];
+  else rightMotorSpeed=1500+driveBuf[1];
 
   Serial.println(leftMotorSpeed);
   Serial.println(rightMotorSpeed);
