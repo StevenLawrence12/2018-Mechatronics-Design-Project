@@ -5,6 +5,8 @@
 #include<Wire.h>
 
 //declare pins
+const int sideUlt1Pin=7;
+const int sideUlt2Pin=8;
 const int frontUltrasonicPin=9;
 const int SPI_CS_PIN=10;
 const int hallPin=A3;
@@ -15,7 +17,8 @@ I2CEncoder leftEncoder;
 I2CEncoder rightEncoder;
 
 //init variables
-unsigned int stage=0;
+unsigned int stage=3;
+//other motor/servo variables
 byte huggingArmPos=0;
 byte extendArmPos=0;
 byte swingArmSpeed=0;
@@ -129,6 +132,7 @@ while(stage==0){
   }
 /************************************/
 }
+break;
 }
 case 1:{ //Wall follow code with the obtaining of the tesseract to move on
   
@@ -142,6 +146,8 @@ send_CAN_Msg(&connMotorId,connMotorBuf);
 swingArmSpeed=255;
 set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos,&swingArmSpeed);
 send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
+//Turn on side ultrasonics
+//declare hall effect sensor read counter
 unsigned int hallConsecRead=0;
 /*****************************/
 
@@ -178,17 +184,20 @@ frontDistance=ultrasonic_Ping(frontUltrasonicPin);
 //read hall effect sensor
 hallEffectRead=analogRead(hallPin);
 //If halleffect sensor sees the tesseract
-if((hallEffectRead<528)||(hallEffectRead>540))
+if((hallEffectRead<hallEffectMin)||(hallEffectRead>hallEffectMax))
 {
   hallConsecRead++;
-  if(hallConsecRead>=4)
+  if(hallConsecRead>=4){
   //increase stage
   stage++;
+  Serial.println("Tesseract obtained! ");
+  }
 }
 else 
 hallConsecRead=0;
 /**************************************/
 }
+break;
 }
 
 case 2:{  //Find pyramid 
@@ -217,9 +226,14 @@ send_CAN_Msg(&connMotorId,connMotorBuf);
 //Increase stage
 stage++;
   /********************************/
+
+  break;
 }
 
 case 3:{ //Deposit tesseract code
+
+
+  Serial.println("Stage 3");
   //Init stage code
   /*********************/
   //Turn off IR sensors
@@ -228,7 +242,7 @@ case 3:{ //Deposit tesseract code
   //Turn on tipping arm
   hug=1;
   extend=1;
-  set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
+  set_CAN_TX_Buf(connMotorBuf,&leftDr,&rightDr,&swing,&hug,&extend);
   send_CAN_Msg(&connMotorId,connMotorBuf);
   /***********************/
 
@@ -314,6 +328,8 @@ send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
   /**********************/
   stage++;
   /*********************/
+
+  break;
 }
 
 case 4:{//Code to turn everything off (end)
