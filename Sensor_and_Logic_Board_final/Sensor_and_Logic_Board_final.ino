@@ -26,7 +26,7 @@ byte rightMotorRev=0;
 long frontDistance;
 //Encoder variables
 long leftEncodRawPos;
-long RightEncodRawPos;
+long rightEncodRawPos;
 
 //init CAN variables
 unsigned long driveMotorsId=0x01;
@@ -154,12 +154,50 @@ send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 delay(2000);
 
 //Drive backwards ceratain distance
-leftMotorSpeed=100;
-rightMotorSpeed=100;
-leftMotorRev=1;
-rightMotorRev=1;
-set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
-send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+
+/**********************************************/
+leftEncoder.zero();
+rightEncoder.zero();
+
+leftEncodRawPos=leftEncoder.getRawPosition();
+rightEncodRawPos=rightEncoder.getRawPosition();
+while((leftEncodRawPos<700)||(rightEncodRawPos<700)){
+  if(leftEncodRawPos>=700){
+    leftMotorSpeed=0;
+    rightMotorSpeed=100;
+    leftMotorRev=1;
+    rightMotorRev=1;
+    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+  }
+  else if(rightEncodRawPos>=700){
+    leftMotorSpeed=100;
+    rightMotorSpeed=0;
+    leftMotorRev=1;
+    rightMotorRev=1;
+    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+  }
+  else{
+   leftMotorSpeed=100;
+   rightMotorSpeed=100;
+   leftMotorRev=1;
+   rightMotorRev=1;
+   set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+   send_CAN_Msg(&driveMotorsId,driveMotorsBuf); 
+  }
+  leftEncodRawPos=leftEncoder.getRawPosition();
+  rightEncodRawPos=rightEncoder.getRawPosition();
+}
+//Stop
+   leftMotorSpeed=0;
+   rightMotorSpeed=0;
+   leftMotorRev=0;
+   rightMotorRev=0;
+   set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+   send_CAN_Msg(&driveMotorsId,driveMotorsBuf); 
+/*************************************************/
+
 
 //retract tipping arm
 extendArmPos=0;
