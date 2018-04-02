@@ -98,31 +98,28 @@ void loop() {
     }
     }
     else if(canId==0x03){
-    for(int i=0;i<5;i++){
-      connBuf[i]=receiveBuf[i];
-    }
+    if(connBuf[0]==1)
+    servo_LeftMotor.attach(LeftMotorPin);
+    else
+    servo_LeftMotor.detach(); 
+    if(connBuf[1]==1)
+    servo_RightMotor.attach(RightMotorPin);
+    else
+    servo_RightMotor.detach(); 
+    if(connBuf[2]==1)
+    servo_Swinging.attach(swingMotorPin);
+    else
+    servo_Swinging.detach(); 
+    if(connBuf[3]==1)
+    servo_Hugging.attach(hugMotorPin);
+    else
+    servo_Hugging.detach(); 
+    if(connBuf[4]==1)
+    servo_Extending.attach(tipMotorPin);
+    else
+    servo_Extending.detach(); 
     }
   }
-  if(connBuf[0]==1)
-  servo_LeftMotor.attach(LeftMotorPin);
-  else
-  servo_LeftMotor.detach(); 
-  if(connBuf[1]==1)
-  servo_RightMotor.attach(RightMotorPin);
-  else
-  servo_RightMotor.detach(); 
-  if(connBuf[2]==1)
-  servo_Swinging.attach(swingMotorPin);
-  else
-  servo_Swinging.detach(); 
-  if(connBuf[3]==1)
-  servo_Hugging.attach(hugMotorPin);
-  else
-  servo_Hugging.detach(); 
-  if(connBuf[4]==1)
-  servo_Extending.attach(tipMotorPin);
-  else
-  servo_Extending.detach(); 
   
   hugArmPos=miscBuf[0];
   extArmPos=miscBuf[1];
