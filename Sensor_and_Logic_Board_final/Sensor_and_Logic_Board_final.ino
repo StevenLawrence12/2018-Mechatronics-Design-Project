@@ -27,12 +27,20 @@ long frontDistance;
 //Encoder variables
 long leftEncodRawPos;
 long rightEncodRawPos;
+//connect motor variables
+byte leftDr=0;
+byte rightDr=0;
+byte swing=0;
+byte hug=0;
+byte extend=0;
 
 //init CAN variables
 unsigned long driveMotorsId=0x01;
 byte driveMotorsBuf[8]={0,0,0,0,0,0,0,0}; //0=leftMotorSpeed, 1=rightMotorSpeed, 2=leftMotorRev, 3=rightMotorRev
 unsigned long miscMotorsId=0x02;
-byte miscMotorsBuf[8]={0,0,0,0,0,0,0,0};
+byte miscMotorsBuf[8]={0,0,0,0,0,0,0,0}; //0=hug arm position, 1=extending arm position, 2=swinging arm speed;
+unsigned long connMotorId=0x03;
+byte connMotorBuf[5]={0,0,0,0,0}; //0=left motor on/off, 1=right motor on/off, 2=swinging motor on/off, 3=hugging motor on/off, 4=extending motor on/off
 
 //function prototypes
 void send_CAN_Msg(unsigned long *msgId,byte *msgBuf);
@@ -63,14 +71,26 @@ void loop() {
 switch(stage){
 case 0:{ //inital start, drive straight to wall, make left turn
 
-//Turn on front ultrasonic
+//initalize case
+/*********************************/
+//Turn on drive motors
+leftDr=1;
+rightDr=1;
+set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
+send_CAN_Msg(&connMotorId,connMotorBuf);
+
+/**********************************/
 
 //Code to drive straight
 /***********************************/
+//Drive control
 leftMotorSpeed=100;
 rightMotorSpeed=100;
 leftMotorRev=0;
 rightMotorRev=0;
+set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+
 /***********************************/
 
 //Code to make a 90 degree left turn
@@ -78,7 +98,7 @@ rightMotorRev=0;
 
 
 //Increase stage after make a succesful first 90 degree turn
-
+stage++;
 /************************************/
 
 }
@@ -87,6 +107,9 @@ case 1:{ //Wall follow code with the obtaining of the tesseract to move on
 /******************************/
 //Turn on side ultrasonics
 //Turn on swinging arm
+swing=1;
+set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
+send_CAN_Msg(&connMotorId,connMotorBuf);
 /*****************************/
 
 //Code to make a 90 dgree left turn after seeing wall
@@ -99,6 +122,7 @@ case 1:{ //Wall follow code with the obtaining of the tesseract to move on
 /***********************************/
 //If halleffect sensor sees the tesseract
 //increase stage
+stage++;
 /**************************************/
 }
 
@@ -107,6 +131,9 @@ case 2:{  //Find pyramid
   /*************************************/
 //Turn off side ultrasonics
 //Turn off swinging arm
+swing=0;
+set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
+send_CAN_Msg(&connMotorId,connMotorBuf);
 //Turn on IR receivers
   /*************************************/
 
@@ -123,6 +150,7 @@ case 2:{  //Find pyramid
 //Drive straight
 
 //Increase stage
+stage++;
   /********************************/
 }
 
@@ -133,6 +161,10 @@ case 3:{ //Deposit tesseract code
   //Turn off front ultrasonic
   //Turn on hugging arm
   //Turn on tipping arm
+  hug=1;
+  extend=1;
+  set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
+  send_CAN_Msg(&connMotorId,connMotorBuf);
   /***********************/
 
   //Tipping code
@@ -222,6 +254,12 @@ send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 case 4:{//Code to turn everything off
   /**************************/
 //Detatch all motors
+leftDr=0;
+rightDr=0;
+hug=0;
+extend=0;
+set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
+send_CAN_Msg(&connMotorId,connMotorBuf);
 //Turn off all sensors
   /**************************/
 }
