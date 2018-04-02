@@ -125,7 +125,7 @@ while(stage==0){
 }
 }
 case 1:{ //Wall follow code with the obtaining of the tesseract to move on
-//Code to follow wall
+  
 /******************************/
 //Turn on side ultrasonics
 //Turn on swinging arm
@@ -134,10 +134,29 @@ set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
 send_CAN_Msg(&connMotorId,connMotorBuf);
 /*****************************/
 
+while(stage==1){
+//Code to follow wall
+/******************************************/
+//check side ultrasonics
+//compare side distances
+//make proper driving correction
+/*****************************************/
+
+//Check front ultrasonic
+frontDistance=ultrasonic_Ping(frontUltrasonicPin);
+
 //Code to make a 90 dgree left turn after seeing wall
 /************************************************/
-//If front distance is less than "Enter min front distance here"
-//Make left turn function
+//If front distance is less than 20cm
+  while(frontDistance<=frontStopDist){
+    //Make left turn function
+    leftMotorRev=1;
+    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+    
+    //check front ultrasonic again
+    frontDistance=ultrasonic_Ping(frontUltrasonicPin);
+  }
 /**********************************************/
 
 //Code to see if we have a tesseract
@@ -146,6 +165,7 @@ send_CAN_Msg(&connMotorId,connMotorBuf);
 //increase stage
 stage++;
 /**************************************/
+}
 }
 
 case 2:{  //Find pyramid 
@@ -273,7 +293,7 @@ send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
   /*********************/
 }
 
-case 4:{//Code to turn everything off
+case 4:{//Code to turn everything off (end)
   /**************************/
 //Detatch all motors
 leftDr=0;
