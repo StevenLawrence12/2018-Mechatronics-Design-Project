@@ -18,6 +18,7 @@ I2CEncoder rightEncoder;
 unsigned int stage=0;
 byte huggingArmPos=0;
 byte extendArmPos=0;
+byte swingArmSpeed=0;
 //hall effect sensor variables
 int hallEffectRead;
 int hallEffectMin=528;
@@ -138,6 +139,9 @@ pinMode(hallPin,INPUT);
 swing=1;
 set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
 send_CAN_Msg(&connMotorId,connMotorBuf);
+swingArmSpeed=255;
+set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos,&swingArmSpeed);
+send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 unsigned int hallConsecRead=0;
 /*****************************/
 
@@ -232,7 +236,7 @@ case 3:{ //Deposit tesseract code
   /*********************/
 //rotate hugging arm
 huggingArmPos=130;
-set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos);
+set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos,&swingArmSpeed);
 send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 
 //Delay 2 seconds
@@ -240,7 +244,7 @@ delay(2000);
 
 //Extend tipping arm
 extendArmPos=180;
-set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos);
+set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos,&swingArmSpeed);
 send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 
 //Delay 2 seconds
@@ -294,15 +298,15 @@ while((leftEncodRawPos<700)||(rightEncodRawPos<700)){
 
 //retract tipping arm
 extendArmPos=0;
-set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos);
+set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos,&swingArmSpeed);
 send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 
 //Delay 1 second
 delay(1000);
 
 //retract hugging arm
-huggingArmPos=130;
-set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos);
+huggingArmPos=0;
+set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos,&swingArmSpeed);
 send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 
 //
