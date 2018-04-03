@@ -17,15 +17,15 @@ I2CEncoder leftEncoder;
 I2CEncoder rightEncoder;
 
 //init variables
-unsigned int stage=3;
+unsigned int stage=0;
 //other motor/servo variables
 byte huggingArmPos=0;
 byte extendArmPos=0;
 byte swingArmSpeed=0;
 //hall effect sensor variables
 int hallEffectRead;
-int hallEffectMin=528;
-int hallEffectMax=540;
+int hallEffectMin=500;
+int hallEffectMax=520;
 //distance variables
 unsigned int frontStopDist=20;
 //Drive Motor variables
@@ -41,11 +41,6 @@ long rightEncodRawPos;
 double leftEncodSpeed;
 double rightEncodSpeed;
 //connect motor variables
-byte leftDr=0;
-byte rightDr=0;
-byte swing=0;
-byte hug=0;
-byte extend=0;
 
 //constants
 int HUGARMFINPOS=100;
@@ -55,8 +50,6 @@ unsigned long driveMotorsId=0x01;
 byte driveMotorsBuf[8]={0,0,0,0,0,0,0,0}; //0=leftMotorSpeed, 1=rightMotorSpeed, 2=leftMotorRev, 3=rightMotorRev
 unsigned long miscMotorsId=0x02;
 byte miscMotorsBuf[8]={0,0,0,0,0,0,0,0}; //0=hug arm position, 1=extending arm position, 2=swinging arm speed;
-unsigned long connMotorId=0x03;
-byte connMotorBuf[5]={0,0,0,0,0}; //0=left motor on/off, 1=right motor on/off, 2=swinging motor on/off, 3=hugging motor on/off, 4=extending motor on/off
 
 //function prototypes
 void send_CAN_Msg(unsigned long *msgId,byte *msgBuf);
@@ -74,33 +67,32 @@ leftEncoder.setReversed(false);
 rightEncoder.init((31.9186)*MOTOR_393_SPEED_ROTATIONS,MOTOR_393_TIME_DELTA);
 rightEncoder.setReversed(true);
 
-while(CAN_OK!=CAN.begin(CAN_500KBPS)){
+while(CAN_OK!=CAN.begin(CAN_1000KBPS)){
   Serial.println("CAN BUS init fail");
   Serial.println("Init CAN BUS fail again");
   delay(100);
 }Serial.println("CAN BUS init ok!");
 
+set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos,&swingArmSpeed);
+send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 
 }
 
 void loop() {
 switch(stage){
 case 0:{ //inital start, drive straight to wall, make left turn
-
+Serial.println("Stage 0");
 //initalize case
 /*********************************/
 //Turn on drive motors
-leftDr=1;
-rightDr=1;
-set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
-send_CAN_Msg(&connMotorId,connMotorBuf);
 
 //start driving
-leftMotorSpeed=100;
+leftMotorSpeed=115;
 rightMotorSpeed=100;
 leftMotorRev=0;
 rightMotorRev=0;
 set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+Serial.println("Forward");
 send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
 /**********************************/
 while(stage==0){
@@ -109,24 +101,27 @@ while(stage==0){
   //Drive control with correction
   leftEncodSpeed=leftEncoder.getSpeed();
   rightEncodSpeed=rightEncoder.getSpeed();
+
+  Serial.print("LeftSpeed: ");
+  Serial.println(leftEncodSpeed);
+  Serial.print("RightSpeed: ");
+  Serial.println(rightEncodSpeed);
   if(leftEncodSpeed>rightEncodSpeed)
   leftMotorSpeed--;
   else if(rightEncodSpeed>leftEncodSpeed)
   leftMotorSpeed++;
   set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+  Serial.println("Forward correction");
   send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
   /***********************************/
   
   //Check front ultrasonic
   frontDistance=ultrasonic_Ping(frontUltrasonicPin);
-  
+  /*Serial.print("Front distance: ");
+  Serial.println(frontDistance);*/
   //Code to make a 90 degree left turn
   /************************************/
   if(frontDistance<=frontStopDist){
-    leftMotorSpeed=0;
-    rightMotorSpeed=0;
-    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
-    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
     turn_90_Deg_Left();
     stage++;
   }
@@ -135,17 +130,18 @@ while(stage==0){
 break;
 }
 case 1:{ //Wall follow code with the obtaining of the tesseract to move on
-  
+Serial.println("Stage 1");
 /******************************/
 //Turn on hall effect sensor
+leftMotorSpeed=0;
+rightMotorSpeed=0;
+set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
 pinMode(hallPin,INPUT);
 //Turn on swinging arm
-swing=1;
-set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
-send_CAN_Msg(&connMotorId,connMotorBuf);
-swingArmSpeed=255;
+/*swingArmSpeed=255;
 set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos,&swingArmSpeed);
-send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
+send_CAN_Msg(&miscMotorsId,miscMotorsBuf);*/
 //Turn on side ultrasonics
 //declare hall effect sensor read counter
 unsigned int hallConsecRead=0;
@@ -167,15 +163,14 @@ frontDistance=ultrasonic_Ping(frontUltrasonicPin);
 //Code to make a 90 dgree left turn after seeing wall
 /************************************************/
 //If front distance is less than 20cm
-  while(frontDistance<=frontStopDist){
-    //Make left turn function
-    leftMotorRev=1;
+
+/*if(frontDistance<=frontStopDist){
+  leftMotorSpeed=0;
+    rightMotorSpeed=0;
     set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
     send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
-    
-    //check front ultrasonic again
-    frontDistance=ultrasonic_Ping(frontUltrasonicPin);
-  }
+    turn_90_Deg_Left();
+}*/
 /**********************************************/
 
 
@@ -184,6 +179,8 @@ frontDistance=ultrasonic_Ping(frontUltrasonicPin);
 //read hall effect sensor
 hallEffectRead=analogRead(hallPin);
 //If halleffect sensor sees the tesseract
+Serial.print("hall effect: ");
+Serial.println(hallEffectRead);
 if((hallEffectRead<hallEffectMin)||(hallEffectRead>hallEffectMax))
 {
   hallConsecRead++;
@@ -201,13 +198,10 @@ break;
 }
 
 case 2:{  //Find pyramid 
+  Serial.println("Stage 2");
   //Stage initialization code
   /*************************************/
 //Turn off side ultrasonics
-//Turn off swinging arm
-swing=0;
-set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
-send_CAN_Msg(&connMotorId,connMotorBuf);
 //Turn on IR receivers
   /*************************************/
 
@@ -234,18 +228,12 @@ case 3:{ //Deposit tesseract code
 
 
   Serial.println("Stage 3");
-  set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos,&swingArmSpeed);
-send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
   //Init stage code
   /*********************/
   //Turn off IR sensors
   //Turn off front ultrasonic
   //Turn on hugging arm
   //Turn on tipping arm
-  hug=1;
-  extend=1;
-  set_CAN_TX_Buf(connMotorBuf,&leftDr,&rightDr,&swing,&hug,&extend);
-  send_CAN_Msg(&connMotorId,connMotorBuf);
   /***********************/
 
   //Tipping code
@@ -300,8 +288,7 @@ while((leftEncodRawPos>-700)||(rightEncodRawPos>-700)){
    send_CAN_Msg(&driveMotorsId,driveMotorsBuf); 
   }
   leftEncodRawPos=leftEncoder.getRawPosition();
-  rightEncodRawPos=rightEncoder.getRawPosition();
-
+rightEncodRawPos=rightEncoder.getRawPosition();
   Serial.print("Left encoder raw pos: ");
   Serial.println(leftEncodRawPos);
   Serial.print("Right encoder raw pos: ");
@@ -340,14 +327,8 @@ send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 }
 
 case 4:{//Code to turn everything off (end)
+  Serial.println("Stage 4");
   /**************************/
-//Detatch all motors
-leftDr=0;
-rightDr=0;
-hug=0;
-extend=0;
-set_CAN_TX_Buf(connMotorBuf,leftDr,rightDr,swing,hug,extend);
-send_CAN_Msg(&connMotorId,connMotorBuf);
 //Turn off all sensors
   /**************************/
 }
@@ -398,26 +379,45 @@ long ultrasonic_Ping(const int ultPin){
 }
 
 void turn_90_Deg_Left(){
+  leftMotorSpeed=0;
+  rightMotorSpeed=0;
+  set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+  Serial.println("Stop");
+  send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+  delay(2000);
   leftEncoder.zero();
   rightEncoder.zero();
-  int tickGoal=305;
+  int tickGoal=290;
   leftMotorSpeed=100;
   rightMotorSpeed=100;
   leftMotorRev=1;
   rightMotorRev=0;
   set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+  Serial.println("Turning left");
   send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
-  while((leftEncoder.getRawPosition()>-tickGoal)||(rightEncoder.getRawPosition()<tickGoal))
+
+  leftEncodRawPos=leftEncoder.getRawPosition();
+  rightEncodRawPos=rightEncoder.getRawPosition();
+  while((leftEncodRawPos>-tickGoal)||(rightEncodRawPos<tickGoal))
   { 
-  if(leftEncoder.getRawPosition()<-tickGoal)
+  if(leftEncodRawPos<-tickGoal){
+  Serial.println("left Stop");
   leftMotorSpeed=0;
   set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
   send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
   }
-  if(rightEncoder.getRawPosition()>tickGoal){
+  if(rightEncodRawPos>tickGoal){
+    Serial.println("right Stop");
     rightMotorSpeed=0;
     set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
     send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
   }
+  leftEncodRawPos=leftEncoder.getRawPosition();
+  rightEncodRawPos=rightEncoder.getRawPosition();
+  Serial.print("Left encoder raw pos: ");
+  Serial.println(leftEncodRawPos);
+  Serial.print("Right encoder raw pos: ");
+  Serial.println(rightEncodRawPos);
+}
 }
 

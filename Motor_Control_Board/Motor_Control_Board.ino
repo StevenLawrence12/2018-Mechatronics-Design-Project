@@ -80,7 +80,7 @@ void setup() {
   servo_RightMotor.attach(RightMotorPin);
 
   //init CAN
-  while(CAN_OK!=CAN.begin(CAN_500KBPS)){
+  while(CAN_OK!=CAN.begin(CAN_1000KBPS)){
     Serial.println("CAN BUS init fail");
     Serial.println("Init CAN BUS fail again");
     delay(100);
