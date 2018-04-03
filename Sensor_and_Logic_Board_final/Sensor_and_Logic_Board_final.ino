@@ -47,6 +47,9 @@ byte swing=0;
 byte hug=0;
 byte extend=0;
 
+//constants
+int HUGARMFINPOS=100;
+
 //init CAN variables
 unsigned long driveMotorsId=0x01;
 byte driveMotorsBuf[8]={0,0,0,0,0,0,0,0}; //0=leftMotorSpeed, 1=rightMotorSpeed, 2=leftMotorRev, 3=rightMotorRev
@@ -59,6 +62,7 @@ byte connMotorBuf[5]={0,0,0,0,0}; //0=left motor on/off, 1=right motor on/off, 2
 void send_CAN_Msg(unsigned long *msgId,byte *msgBuf);
 void set_CAN_TX_Buf(byte *buf,byte *b0=0, byte *b1=0, byte *b2=0, byte *b3=0, byte *b4=0, byte *b5=0, byte *b6=0, byte *b7=0);
 long ultrasonic_Ping(const int ultPin);
+void turn_90_Deg_Left();
 
 void setup() {
 Serial.begin(9600);
@@ -76,7 +80,6 @@ while(CAN_OK!=CAN.begin(CAN_500KBPS)){
   delay(100);
 }Serial.println("CAN BUS init ok!");
 
-//Pinmodes
 
 }
 
@@ -119,16 +122,13 @@ while(stage==0){
   
   //Code to make a 90 degree left turn
   /************************************/
-  while(frontDistance<=frontStopDist){
-    leftMotorRev=1;
+  if(frontDistance<=frontStopDist){
+    leftMotorSpeed=0;
+    rightMotorSpeed=0;
     set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
     send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
-    
-    //check front ultrasonic again
-    frontDistance=ultrasonic_Ping(frontUltrasonicPin);
-    
-    //Increase stage after make a succesful first 90 degree turn
-    stage=1;
+    turn_90_Deg_Left();
+    stage++;
   }
 /************************************/
 }
@@ -234,6 +234,8 @@ case 3:{ //Deposit tesseract code
 
 
   Serial.println("Stage 3");
+  set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos,&swingArmSpeed);
+send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
   //Init stage code
   /*********************/
   //Turn off IR sensors
@@ -249,7 +251,7 @@ case 3:{ //Deposit tesseract code
   //Tipping code
   /*********************/
 //rotate hugging arm
-huggingArmPos=130;
+huggingArmPos=HUGARMFINPOS;
 set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos,&swingArmSpeed);
 send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 
@@ -257,7 +259,7 @@ send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 delay(2000);
 
 //Extend tipping arm
-extendArmPos=180;
+extendArmPos=160;
 set_CAN_TX_Buf(miscMotorsBuf,&huggingArmPos,&extendArmPos,&swingArmSpeed);
 send_CAN_Msg(&miscMotorsId,miscMotorsBuf);
 
@@ -272,17 +274,17 @@ rightEncoder.zero();
 
 leftEncodRawPos=leftEncoder.getRawPosition();
 rightEncodRawPos=rightEncoder.getRawPosition();
-while((leftEncodRawPos<700)||(rightEncodRawPos<700)){
-  if(leftEncodRawPos>=700){
+while((leftEncodRawPos>-700)||(rightEncodRawPos>-700)){
+  if(leftEncodRawPos<=-700){
     leftMotorSpeed=0;
-    rightMotorSpeed=100;
+    rightMotorSpeed=120;
     leftMotorRev=1;
     rightMotorRev=1;
     set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
     send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
   }
-  else if(rightEncodRawPos>=700){
-    leftMotorSpeed=100;
+  else if(rightEncodRawPos<=-700){
+    leftMotorSpeed=120;
     rightMotorSpeed=0;
     leftMotorRev=1;
     rightMotorRev=1;
@@ -299,6 +301,11 @@ while((leftEncodRawPos<700)||(rightEncodRawPos<700)){
   }
   leftEncodRawPos=leftEncoder.getRawPosition();
   rightEncodRawPos=rightEncoder.getRawPosition();
+
+  Serial.print("Left encoder raw pos: ");
+  Serial.println(leftEncodRawPos);
+  Serial.print("Right encoder raw pos: ");
+  Serial.println(rightEncodRawPos);
 }
 //Stop
    leftMotorSpeed=0;
@@ -388,5 +395,29 @@ long ultrasonic_Ping(const int ultPin){
   cm = duration/29/2;
 
   return cm;
+}
+
+void turn_90_Deg_Left(){
+  leftEncoder.zero();
+  rightEncoder.zero();
+  int tickGoal=305;
+  leftMotorSpeed=100;
+  rightMotorSpeed=100;
+  leftMotorRev=1;
+  rightMotorRev=0;
+  set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+  send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+  while((leftEncoder.getRawPosition()>-tickGoal)||(rightEncoder.getRawPosition()<tickGoal))
+  { 
+  if(leftEncoder.getRawPosition()<-tickGoal)
+  leftMotorSpeed=0;
+  set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+  send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+  }
+  if(rightEncoder.getRawPosition()>tickGoal){
+    rightMotorSpeed=0;
+    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+  }
 }
 
