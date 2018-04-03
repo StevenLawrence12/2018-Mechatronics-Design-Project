@@ -8,9 +8,9 @@
 #include<SPI.h>
 
 //declare pins
-const int tipMotorPin=5;
-const int swingMotorPin=6;
-const int hugMotorPin=7;
+const int swingMotorPin=2;
+const int hugMotorPin=3;
+const int tipMotorPin=4;
 const int LeftMotorPin=8;
 const int RightMotorPin=9;
 const int SPI_CS_PIN=10;
@@ -74,8 +74,10 @@ void setup() {
   pinMode(LeftMotorPin,OUTPUT);
   pinMode(RightMotorPin,OUTPUT);
 
-  servo_Swinging.attach(swingMotorPin);
+  servo_Hugging.attach(hugMotorPin);
   servo_Extending.attach(tipMotorPin);
+  servo_LeftMotor.attach(LeftMotorPin);
+  servo_RightMotor.attach(RightMotorPin);
 
   //init CAN
   while(CAN_OK!=CAN.begin(CAN_500KBPS)){
@@ -118,7 +120,8 @@ void loop() {
     }
     }
   }
-if(connBuf[0]!=lastLeft){
+  
+/*if(connBuf[0]!=lastLeft){
   lastLeft=connBuf[0];
   if(connBuf[0]==1){
   servo_LeftMotor.attach(LeftMotorPin);
@@ -172,7 +175,7 @@ if(connBuf[4]!=lastExt){
     servo_Extending.detach(); 
     Serial.println("extending motor dettched");
     }
-}
+}*/
   
 
   hugArmPos=miscBuf[0];
@@ -193,6 +196,7 @@ if(connBuf[4]!=lastExt){
 
   //drive motors
   drive(leftMotorSpeed, rightMotorSpeed);
+  //Serial.println(hugArmPos);
   servo_Hugging.write(hugArmPos);
   servo_Extending.write(extArmPos);
   servo_Swinging.writeMicroseconds(swingArmSpeed+1500);
