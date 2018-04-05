@@ -5,9 +5,10 @@
 #include<Wire.h>
 
 //declare pins
-const int sideUlt1Pin=7;
-const int sideUlt2Pin=8;
-const int frontUltrasonicPin=9;
+const int sideUlt1Pin=6;
+const int sideUlt2Pin=7;
+const int frontRightUltPin=8;
+const int frontLeftUltPin=9;
 const int SPI_CS_PIN=10;
 const int hallPin=A3;
 
@@ -27,14 +28,18 @@ int hallEffectRead;
 int hallEffectMin=500;
 int hallEffectMax=520;
 //distance variables
-unsigned int frontStopDist=20;
+unsigned int frontStopDist=19;
+unsigned int corFrontStopDist=35;
 //Drive Motor variables
 byte leftMotorSpeed=0;
 byte rightMotorSpeed=0;
 byte leftMotorRev=0;
 byte rightMotorRev=0;
 //ultrasonic variables
-long frontDistance;
+long frontRightDist;
+long frontLeftDist;
+long sideFrontDist;
+long sideRearDist;
 //Encoder variables
 long leftEncodRawPos;
 long rightEncodRawPos;
@@ -55,7 +60,7 @@ byte miscMotorsBuf[8]={0,0,0,0,0,0,0,0}; //0=hug arm position, 1=extending arm p
 void send_CAN_Msg(unsigned long *msgId,byte *msgBuf);
 void set_CAN_TX_Buf(byte *buf,byte *b0=0, byte *b1=0, byte *b2=0, byte *b3=0, byte *b4=0, byte *b5=0, byte *b6=0, byte *b7=0);
 long ultrasonic_Ping(const int ultPin);
-void turn_90_Deg_Left();
+void turn_Left(double degree);
 
 void setup() {
 Serial.begin(9600);
@@ -87,7 +92,7 @@ Serial.println("Stage 0");
 //Turn on drive motors
 
 //start driving
-leftMotorSpeed=115;
+leftMotorSpeed=120;
 rightMotorSpeed=100;
 leftMotorRev=0;
 rightMotorRev=0;
@@ -116,13 +121,26 @@ while(stage==0){
   /***********************************/
   
   //Check front ultrasonic
-  frontDistance=ultrasonic_Ping(frontUltrasonicPin);
-  /*Serial.print("Front distance: ");
-  Serial.println(frontDistance);*/
+  frontRightDist=ultrasonic_Ping(frontRightUltPin);
+  frontLeftDist=ultrasonic_Ping(frontLeftUltPin);
+  Serial.print("Front Right distance: ");
+  Serial.println(frontRightDist);
+  Serial.print("Front Left distance: ");
+  Serial.println(frontLeftDist);
   //Code to make a 90 degree left turn
   /************************************/
-  if(frontDistance<=frontStopDist){
-    turn_90_Deg_Left();
+  if(frontRightDist<frontStopDist){
+rightMotorSpeed=0;
+set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+  }
+  if(frontLeftDist<frontStopDist){
+leftMotorSpeed=0;
+set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+send_CAN_Msg(&driveMotorsId,driveMotorsBuf);    
+  }
+  if(frontRightDist<=frontStopDist&&frontLeftDist<=frontStopDist){
+    turn_Left(90);
     stage++;
   }
 /************************************/
@@ -137,6 +155,7 @@ leftMotorSpeed=0;
 rightMotorSpeed=0;
 set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
 send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+delay(1000);
 pinMode(hallPin,INPUT);
 //Turn on swinging arm
 /*swingArmSpeed=255;
@@ -147,30 +166,146 @@ send_CAN_Msg(&miscMotorsId,miscMotorsBuf);*/
 unsigned int hallConsecRead=0;
 /*****************************/
 
+leftMotorSpeed=120;
+rightMotorSpeed=100;
+leftMotorRev=0;
+rightMotorRev=0;
+set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+
 while(stage==1){
 //Init stage 1
 
 //Code to follow wall
 /******************************************/
 //check side ultrasonics
+sideFrontDist=ultrasonic_Ping(sideUlt1Pin);
+sideRearDist=ultrasonic_Ping(sideUlt2Pin);
+Serial.print("side dist 1: ");
+Serial.println(sideFrontDist);
+Serial.print("side dist 2: ");
+Serial.println(sideRearDist);
 //compare side distances
 //make proper driving correction
 /*****************************************/
 
 //Check front ultrasonic
-frontDistance=ultrasonic_Ping(frontUltrasonicPin);
-
-//Code to make a 90 dgree left turn after seeing wall
+frontRightDist=ultrasonic_Ping(frontRightUltPin);
+frontLeftDist=ultrasonic_Ping(frontLeftUltPin);
+Serial.print("Front Right distance: ");
+Serial.println(frontRightDist);
+Serial.print("Front Left distance: ");
+Serial.println(frontLeftDist);
+//Code to make a  left turn after seeing wall
 /************************************************/
 //If front distance is less than 20cm
 
-/*if(frontDistance<=frontStopDist){
-  leftMotorSpeed=0;
+ if(frontRightDist<corFrontStopDist){
+rightMotorSpeed=0;
+set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+  }
+  if(frontLeftDist<corFrontStopDist){
+leftMotorSpeed=0;
+set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+send_CAN_Msg(&driveMotorsId,driveMotorsBuf);    
+  }
+if(frontRightDist<=corFrontStopDist&&frontLeftDist<=corFrontStopDist){
+  Serial.println("Corner turn");
+    int delTime=300;
+    
+    turn_Left(5);
+    Serial.println("Turn 1");
+    leftMotorSpeed=120;
+    rightMotorSpeed=120;
+    leftMotorRev=0;
+    rightMotorRev=0;
+    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+    delay(delTime);
+    delay(delTime);
+    delay(delTime);
+   
+    turn_Left(15);
+    Serial.println("Turn 2");
+    leftMotorSpeed=120;
+    rightMotorSpeed=120;
+    leftMotorRev=0;
+    rightMotorRev=0;
+    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+    delay(delTime);
+    delay(delTime);
+
+    turn_Left(30);
+    Serial.println("Turn 3");
+    leftMotorSpeed=120;
+    rightMotorSpeed=120;
+    leftMotorRev=0;
+    rightMotorRev=0;
+    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+    delay(delTime);
+
+    turn_Left(40);
+    Serial.println("Turn 4");
+    /*leftMotorSpeed=120;
+    rightMotorSpeed=120;
+    leftMotorRev=0;
+    rightMotorRev=0;
+    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+    delay(delTime);
+
+    turn_Left(10);
+    Serial.println("Turn 5");
+    leftMotorSpeed=120;
+    rightMotorSpeed=120;
+    leftMotorRev=0;
+    rightMotorRev=0;
+    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+    delay(delTime);
+
+    turn_Left(10);
+    Serial.println("Turn 6");
+    leftMotorSpeed=120;
+    rightMotorSpeed=120;
+    leftMotorRev=0;
+    rightMotorRev=0;
+    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+    delay(delTime);
+
+    turn_Left(10);
+    Serial.println("Turn 7");
+    leftMotorSpeed=120;
+    rightMotorSpeed=120;
+    leftMotorRev=0;
+    rightMotorRev=0;
+    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+    delay(delTime);
+
+    turn_Left(10);
+    Serial.println("Turn 8");
+    leftMotorSpeed=120;
+    rightMotorSpeed=120;
+    leftMotorRev=0;
+    rightMotorRev=0;
+    set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
+    send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
+    delay(delTime);
+
+    turn_Left(10);
+    Serial.println("Turn 9");*/
+
+    leftMotorSpeed=0;
     rightMotorSpeed=0;
     set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
     send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
-    turn_90_Deg_Left();
-}*/
+  
+}
 /**********************************************/
 
 
@@ -181,7 +316,7 @@ hallEffectRead=analogRead(hallPin);
 //If halleffect sensor sees the tesseract
 Serial.print("hall effect: ");
 Serial.println(hallEffectRead);
-if((hallEffectRead<hallEffectMin)||(hallEffectRead>hallEffectMax))
+/*if((hallEffectRead<hallEffectMin)||(hallEffectRead>hallEffectMax))
 {
   hallConsecRead++;
   if(hallConsecRead>=4){
@@ -191,7 +326,7 @@ if((hallEffectRead<hallEffectMin)||(hallEffectRead>hallEffectMax))
   }
 }
 else 
-hallConsecRead=0;
+hallConsecRead=0;*/
 /**************************************/
 }
 break;
@@ -378,18 +513,18 @@ long ultrasonic_Ping(const int ultPin){
   return cm;
 }
 
-void turn_90_Deg_Left(){
+void turn_Left(double degree){
   leftMotorSpeed=0;
   rightMotorSpeed=0;
   set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
   Serial.println("Stop");
   send_CAN_Msg(&driveMotorsId,driveMotorsBuf);
-  delay(2000);
+  delay(1500);
   leftEncoder.zero();
   rightEncoder.zero();
-  int tickGoal=290;
-  leftMotorSpeed=100;
-  rightMotorSpeed=100;
+  double tickGoal=(degree*100)/29;
+  leftMotorSpeed=120;
+  rightMotorSpeed=120;
   leftMotorRev=1;
   rightMotorRev=0;
   set_CAN_TX_Buf(driveMotorsBuf,&leftMotorSpeed,&rightMotorSpeed,&leftMotorRev,&rightMotorRev);
