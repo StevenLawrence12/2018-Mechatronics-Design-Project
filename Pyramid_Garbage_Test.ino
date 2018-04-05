@@ -11,6 +11,10 @@ int checkGarbage(int reading, int readingReference, int countNum)
   {
     countNum++;
   }
+  
+  else {
+    countNum = 0;
+  }
 
   return countNum;
 }
